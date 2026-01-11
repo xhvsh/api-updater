@@ -1,4 +1,16 @@
-const API_KEY = "api key here :3";
+let API_KEY = localStorage.getItem("API_KEY");
+if (!API_KEY) {
+  API_KEY = prompt("Enter the API key:");
+
+  if (API_KEY) {
+    localStorage.setItem("API_KEY", API_KEY);
+  } else {
+    alert("No API key entered!");
+    location.reload();
+  }
+} else {
+  console.log("Using stored API key");
+}
 
 const RAW_URL = `https://gist.githubusercontent.com/xhvsh/ec578df51c8684fd9729ee86958c4dbc/raw/api.json`;
 const API_URL = `https://api.github.com/gists/ec578df51c8684fd9729ee86958c4dbc`;
@@ -39,7 +51,13 @@ fetch(API_URL, {
   })
   .then((res) => res.json())
   .then((json) => renderData(json.data))
-  .catch((err) => console.error("Fetch error:", err));
+  .catch((err) => {
+    alert("Wrong API key provided.");
+    console.error("Fetch error:", err);
+
+    localStorage.removeItem("API_KEY");
+    location.reload();
+  });
 
 function renderData(dataArray) {
   container.innerHTML = "";
@@ -118,7 +136,7 @@ function updateGist(jsonData) {
     })
     .then(() => {
       alert("Api updated successfully!");
-      console.log("Api updated successfully.");
+      console.log("Api updated successfully");
     })
     .catch((err) => {
       alert("Api update error, more info in console.");
