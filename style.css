@@ -80,6 +80,7 @@ button span {
   position: relative;
   font-size: 1rem;
   z-index: 2;
+  color: #fff;
 }
 button:hover {
   transform: scale(1.1);
