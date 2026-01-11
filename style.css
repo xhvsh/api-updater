@@ -21,12 +21,7 @@ body {
 
 h1 {
   font-family: var(--normal);
-}
-button {
-  all: unset;
-  font-family: var(--normal);
-  background: #222;
-  border-radius: 5px;
+  user-select: none;
 }
 .container {
   display: flex;
@@ -36,41 +31,109 @@ button {
 .item {
   display: grid;
   gap: 1rem;
-  grid-template-columns: 5rem 1fr;
+  grid-template-columns: 6rem 1fr;
   grid-template-rows: 1fr 1fr;
-
   padding: 1rem 2rem;
   border: 1px solid #333;
   border-radius: 10px;
+
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.3s linear, transform 0.4s ease;
+  will-change: opacity, transform;
+}
+.item.show {
+  transform: translateY(0);
 }
 .item label {
   font-family: var(--normal);
   padding: 0.3rem 0;
+  user-select: none;
 }
-.item input {
+input {
   font-family: var(--mono);
   padding: 0.3rem 0.6rem;
-  color: #000;
-  background: #fff;
+  color: #fff;
+  background: #222;
   border: none;
   outline: none;
+  border-radius: 5px;
 }
 .btns {
   display: flex;
   flex-direction: row;
   justify-content: center;
-  gap: 1rem;
+  gap: 2rem;
 }
 button {
+  position: relative;
+  font-family: var(--normal);
+  border-radius: 5px;
+  border: none;
   padding: 1rem 2rem;
   cursor: pointer;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  user-select: none;
 }
+button span {
+  position: relative;
+  font-size: 1rem;
+  z-index: 2;
+}
+button:hover {
+  transform: scale(1.1);
+}
+button::before {
+  position: absolute;
+  content: "";
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  transform: translateX(100%);
+  transition: all 0.3s ease;
+  z-index: 1;
+}
+button:hover::before {
+  transform: translateX(0);
+}
+
 #addField {
   background: #005;
 }
 #updateApi {
   background: #050;
 }
-#cancelChanges {
+#cancelChanges,
+#deleteItem {
   background: #500;
+}
+
+#addField::before {
+  background: linear-gradient(135deg, #005 0%, #009 100%);
+}
+#updateApi::before {
+  background: linear-gradient(135deg, #050 0%, #090 100%);
+}
+#cancelChanges::before,
+#deleteItem::before {
+  background: linear-gradient(135deg, #500 0%, #900 100%);
+}
+
+.delete {
+  display: flex;
+  flex-direction: row;
+  gap: 2rem;
+  justify-content: center;
+  user-select: none;
+  font-family: var(--normal);
+}
+.col {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.delete button {
+  height: 100%;
 }

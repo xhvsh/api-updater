@@ -1,3 +1,5 @@
+// API key handler
+
 let API_KEY = localStorage.getItem("API_KEY");
 if (!API_KEY) {
   API_KEY = prompt("Enter the API key:");
@@ -6,7 +8,6 @@ if (!API_KEY) {
     localStorage.setItem("API_KEY", API_KEY);
   } else {
     alert("No API key entered!");
-    location.reload();
   }
 } else {
   console.log("Using stored API key");
@@ -15,6 +16,27 @@ if (!API_KEY) {
 const RAW_URL = `https://gist.githubusercontent.com/xhvsh/ec578df51c8684fd9729ee86958c4dbc/raw/api.json`;
 const API_URL = `https://api.github.com/gists/ec578df51c8684fd9729ee86958c4dbc`;
 
+// new observer for smooth scrolling animations
+
+const observer = new IntersectionObserver(
+  (entries) => {
+    entries.forEach((entry) => {
+      const ratio = entry.intersectionRatio;
+
+      if (ratio > 0) {
+        entry.target.classList.add("show");
+        entry.target.style.opacity = ratio.toFixed(2);
+      } else {
+        entry.target.classList.remove("show");
+        entry.target.style.opacity = 0;
+      }
+    });
+  },
+  {
+    threshold: Array.from({ length: 101 }, (_, i) => i / 100),
+  }
+);
+
 // html elements
 
 const container = document.querySelector(".container");
@@ -22,6 +44,7 @@ const container = document.querySelector(".container");
 const addBtn = document.querySelector("#addField");
 const updateBtn = document.querySelector("#updateApi");
 const cancelBtn = document.querySelector("#cancelChanges");
+const deleteBtn = document.querySelector("#deleteItem");
 
 // helpers for json formating to avoid any inconsistency
 
@@ -52,11 +75,10 @@ fetch(API_URL, {
   .then((res) => res.json())
   .then((json) => renderData(json.data))
   .catch((err) => {
-    alert("Wrong API key provided.");
+    // alert("Wrong API key provided.");
     console.error("Fetch error:", err);
 
     localStorage.removeItem("API_KEY");
-    location.reload();
   });
 
 function renderData(dataArray) {
@@ -67,29 +89,42 @@ function renderData(dataArray) {
 // adding items to html (version 29810598 :sob:)
 
 function createField(phrase = "", explanation = "") {
+  let i = document.querySelectorAll(".container div").length;
   const wrapper = document.createElement("div");
   wrapper.className = "item";
 
   wrapper.innerHTML = `
-    <label>Phrase</label>
-    <input
-      type="text"
-      class="phrase-input"
-      value="${escapeHtml(showNewlines(phrase))}"
-    />
-
-    <label>Explanation</label>
-    <input
-      type="text"
-      class="explanation-input"
-      value="${escapeHtml(showNewlines(explanation))}"
-    />
+  <label>Phrase #${i}</label>
+  <input
+  type="text"
+  class="phrase-input"
+  value="${escapeHtml(showNewlines(phrase))}"
+  />
+  
+  <label>Explanation</label>
+  <input
+  type="text"
+  class="explanation-input"
+  value="${escapeHtml(showNewlines(explanation))}"
+  />
   `;
 
   container.appendChild(wrapper);
+  observer.observe(wrapper);
+}
+
+// removing items from html
+
+function deleteField(num) {
+  let allFields = document.querySelectorAll(".container div");
+  allFields[num].remove();
 }
 
 // button handling, simple stuff... right?
+
+deleteBtn.addEventListener("click", () => {
+  deleteField(document.querySelector(".delete-item").value);
+});
 
 addBtn.addEventListener("click", () => {
   createField();
