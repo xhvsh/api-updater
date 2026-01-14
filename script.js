@@ -2,18 +2,21 @@
 
 let API_KEY = localStorage.getItem("API_KEY");
 if (!API_KEY) {
-  API_KEY = prompt("Enter the API key:");
+  document.querySelector(".submitKey").addEventListener("click", () => {
+    API_KEY = document.querySelector(".value").value;
 
-  if (API_KEY) {
     localStorage.setItem("API_KEY", API_KEY);
-  } else {
-    alert("No API key entered!");
-  }
+
+    location.reload();
+  });
 } else {
   console.log("Using stored API key");
+
+  document.querySelector(".delete").classList.remove("hidden");
+  document.querySelector(".btns").classList.remove("hidden");
+  document.querySelector(".key").classList.add("hidden");
 }
 
-const RAW_URL = `https://gist.githubusercontent.com/xhvsh/ec578df51c8684fd9729ee86958c4dbc/raw/api.json`;
 const API_URL = `https://api.github.com/gists/ec578df51c8684fd9729ee86958c4dbc`;
 
 // new observer for smooth scrolling animations
@@ -75,10 +78,12 @@ fetch(API_URL, {
   .then((res) => res.json())
   .then((json) => renderData(json.data))
   .catch((err) => {
-    // alert("Wrong API key provided.");
     console.error("Fetch error:", err);
 
-    localStorage.removeItem("API_KEY");
+    if (API_KEY) {
+      localStorage.removeItem("API_KEY");
+      location.reload();
+    }
   });
 
 function renderData(dataArray) {

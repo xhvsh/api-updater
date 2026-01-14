@@ -23,6 +23,26 @@ h1 {
   font-family: var(--normal);
   user-select: none;
 }
+
+.key {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 1rem;
+  font-family: var(--normal);
+}
+.key p {
+  font-size: 1rem;
+}
+.key input {
+  font-family: var(--mono);
+  padding: 0.3rem 1rem;
+}
+.key button {
+  background: #333;
+  padding: 0.3rem 1rem;
+}
+
 .container {
   display: flex;
   flex-direction: column;
@@ -137,4 +157,8 @@ button:hover::before {
 }
 .delete button {
   height: 100%;
+}
+
+.hidden {
+  display: none;
 }

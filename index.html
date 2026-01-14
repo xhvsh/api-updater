@@ -10,9 +10,16 @@
   </head>
   <body>
     <h1>GD Gamers Iceberg Api Editor</h1>
+
+    <div class="key">
+      <p>Enter the API key to proceed:</p>
+      <input type="text" class="value" />
+      <button class="submitKey">Submit</button>
+    </div>
+
     <div class="container"></div>
 
-    <div class="delete">
+    <div class="delete hidden">
       <div class="col">
         <p>Input the phrase number that you want to delete</p>
         <input type="text" class="delete-item" />
@@ -22,7 +29,7 @@
       </div>
     </div>
 
-    <div class="btns">
+    <div class="btns hidden">
       <button id="addField"><span>Add Field</span></button>
       <button id="updateApi"><span>Update API</span></button>
       <button id="cancelChanges"><span>Cancel Changes</span></button>
