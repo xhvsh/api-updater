@@ -1,38 +1,121 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>- API Editor -</title>
-
-    <link rel="stylesheet" href="./style.css" />
-    <script src="./script.js" defer></script>
+    <title>GDG API Editor</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <h1>GD Gamers Iceberg Api Editor</h1>
+    <div id="app">
+      <!-- login -->
+      <div id="login-screen">
+        <div class="login-card">
+          <div class="login-logo">
+            <div class="login-logo-icon">
+              <img src="./img/gdg.webp" alt="GDG" class="logo-img" />
+            </div>
+            <div>
+              <h1>GDG API Editor</h1>
+              <p>GD Gamers Iceberg - made by xhvsh</p>
+            </div>
+          </div>
 
-    <div class="key">
-      <p>Enter the API key to proceed:</p>
-      <input type="text" class="value" />
-      <button class="submitKey">Submit</button>
-    </div>
+          <label class="field-label" for="key-input">Access Key</label>
+          <div class="input-wrap">
+            <input type="password" id="key-input" placeholder="Enter your key..." autocomplete="off" />
+            <button class="toggle-vis" id="toggle-vis" title="Show / hide">👁</button>
+          </div>
 
-    <div class="container"></div>
+          <div class="remember-row">
+            <input type="checkbox" id="remember-key" checked />
+            <label for="remember-key">Remember on this browser</label>
+          </div>
 
-    <div class="delete hidden">
-      <div class="col">
-        <p>Input the phrase number that you want to delete</p>
-        <input type="text" class="delete-item" />
+          <button class="btn btn-primary" id="login-btn">⌗ &nbsp;Authenticate &amp; Load</button>
+          <div class="alert alert-error" id="login-error"></div>
+        </div>
       </div>
-      <div class="col">
-        <button id="deleteItem"><span>Delete Item</span></button>
+
+      <!-- editor -->
+      <div id="editor-screen">
+        <div class="topbar">
+          <div class="topbar-left">
+            <div class="topbar-icon">
+              <img src="./img/gdg.webp" alt="GDG" class="logo-img" />
+            </div>
+            <h2>GDG API Editor</h2>
+            <span class="topbar-badge">Live</span>
+            <div class="unsaved-dot" id="unsaved-dot" title="Unsaved changes"></div>
+          </div>
+          <div class="topbar-right">
+            <div class="key-indicator">
+              <span class="key-dot"></span>
+              <span id="key-display">••••••••</span>
+            </div>
+            <button class="btn btn-ghost btn-sm" id="logout-btn">Logout</button>
+          </div>
+        </div>
+
+        <div class="editor-main">
+          <div class="status-bar">
+            <div class="status-left">
+              <div class="count-badge"><span id="item-count">0</span> items</div>
+              <div class="search-wrap">
+                <span class="search-icon">⌕</span>
+                <input type="text" id="search-input" placeholder="Filter items..." />
+              </div>
+            </div>
+            <div class="status-right">
+              <button class="btn btn-ghost btn-sm" id="cancel-btn">↺ Revert</button>
+              <button class="btn btn-ghost btn-sm" id="add-btn">+ Add Item</button>
+              <button class="btn btn-primary btn-sm" id="update-btn">↑ Push to API</button>
+            </div>
+          </div>
+
+          <div class="items-container" id="items-list">
+            <div class="empty-state" id="empty-state">
+              <div class="empty-icon">◇</div>
+              <p>No items loaded</p>
+            </div>
+          </div>
+
+          <button class="add-field-btn" id="add-btn-bottom">&#xff0b; &nbsp;Add new item</button>
+        </div>
+
+        <div class="footer-bar">
+          <button class="btn btn-ghost btn-sm" id="cancel-btn-2">↺ Revert Changes</button>
+          <div class="spacer"></div>
+          <button class="btn btn-ghost btn-sm" id="refresh-btn">⟳ Reload from API</button>
+          <button class="btn btn-success btn-sm" id="update-btn-2">↑ Push to API</button>
+        </div>
       </div>
+
+      <!-- loading -->
+      <div class="loading-overlay" id="loading">
+        <div class="loading-box">
+          <div class="spinner"></div>
+          <div class="loading-text" id="loading-text">Loading...</div>
+        </div>
+      </div>
+
+      <!-- confirming -->
+      <div class="dialog-overlay" id="dialog">
+        <div class="dialog-box">
+          <div class="dialog-title" id="dialog-title">Confirm</div>
+          <div class="dialog-msg" id="dialog-msg"></div>
+          <div class="dialog-btns">
+            <button class="btn btn-ghost btn-sm" id="dialog-cancel">Cancel</button>
+            <button class="btn btn-danger btn-sm" id="dialog-confirm">Confirm</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- toast -->
+      <div id="toast"></div>
     </div>
 
-    <div class="btns hidden">
-      <button id="addField"><span>Add Field</span></button>
-      <button id="updateApi"><span>Update API</span></button>
-      <button id="cancelChanges"><span>Cancel Changes</span></button>
-    </div>
+    <script src="script.js"></script>
   </body>
 </html>
