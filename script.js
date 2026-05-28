@@ -507,7 +507,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Push
   $("update-btn").addEventListener("click", pushGist);
-  $("update-btn-2").addEventListener("click", pushGist);
 
   // Reload from API
   $("refresh-btn").addEventListener("click", async () => {
