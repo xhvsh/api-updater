@@ -13,6 +13,11 @@ const PUBLIC_HEADERS = {
   Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
 };
 
+// icons
+let successIcon = `<i class="fa-solid fa-circle-check"></i>`;
+let errorIcon = `<i class="fa-solid fa-circle-xmark"></i>`;
+let infoIcon = `<i class="fa-solid fa-circle-info"></i>`;
+
 // states
 let ghToken = "";
 let apiData = [];
@@ -37,7 +42,7 @@ function setLoading(show, text = "Loading...") {
 /* Toast (plain, auto-dismiss) */
 function toast(msg, type = "info") {
   const labels = { success: "Success", error: "Error", info: "Info" };
-  const icons = { success: "✓", error: "✗", info: "ℹ" };
+  const icons = { success: successIcon, error: errorIcon, info: infoIcon };
   _spawnToast(labels[type] ?? "Info", msg, type, 3400, false);
 }
 
@@ -50,7 +55,7 @@ function showAlert(msg, type = "info") {
 }
 
 function _spawnToast(title, msg, type, duration, dismissable, onClose) {
-  const icons = { success: "✓", error: "✗", info: "ℹ" };
+  const icons = { success: successIcon, error: errorIcon, info: infoIcon };
   const container = $("toast");
 
   const el = document.createElement("div");
@@ -58,7 +63,7 @@ function _spawnToast(title, msg, type, duration, dismissable, onClose) {
   el.style.setProperty("--duration", duration + "ms");
 
   el.innerHTML = `
-    <span class="toast-icon">${icons[type] ?? "ℹ"}</span>
+    <span class="toast-icon">${icons[type] ?? infoIcon}</span>
     <div class="toast-body">
       <div class="toast-title">${escHtml(title)}</div>
       <div class="toast-msg">${escHtml(msg)}</div>
@@ -226,7 +231,7 @@ function enterApp(username, token) {
   ghToken = token;
   $("auth-wrapper").classList.add("hidden");
   $("app").classList.remove("hidden");
-  $("logged-in-user").textContent = username;
+  $("logged-in-user").innerHTML = `<i class="fa-solid fa-circle-user"></i> ${username}`;
   $("welcome-username").textContent = username;
   loadGist();
 }
@@ -343,7 +348,7 @@ function buildCard(item, index) {
 
   card.innerHTML = `
     <div class="item-inner">
-      <div class="drag-handle" title="Drag to reorder">⠿</div>
+      <div class="drag-handle" title="Drag to reorder"><i class="fa-solid fa-grip-vertical"></i></div>
       <div class="item-index">#${String(index + 1).padStart(2, "0")}</div>
       <div class="item-fields">
         <div class="field-row">
@@ -362,10 +367,10 @@ function buildCard(item, index) {
         </div>
       </div>
       <div class="item-actions">
-        <button class="item-btn up-btn"  title="Move up"   ${isFirst ? "disabled" : ""}>↑</button>
-        <button class="item-btn dn-btn"  title="Move down" ${isLast ? "disabled" : ""}>↓</button>
-        <button class="item-btn dup-btn" title="Duplicate">⧉</button>
-        <button class="item-btn del-btn" title="Delete">✕</button>
+        <button class="item-btn up-btn"  title="Move up"   ${isFirst ? "disabled" : ""}><i class="fa-solid fa-arrow-up"></i></button>
+        <button class="item-btn dn-btn"  title="Move down" ${isLast ? "disabled" : ""}><i class="fa-solid fa-arrow-down"></i></button>
+        <button class="item-btn dup-btn" title="Duplicate"><i class="fa-solid fa-clone"></i></button>
+        <button class="item-btn del-btn" title="Delete"><i class="fa-solid fa-trash"></i></button>
       </div>
     </div>`;
 

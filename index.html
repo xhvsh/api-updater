@@ -6,6 +6,9 @@
   <title>GDG API Editor</title>
   <link rel="stylesheet" href="./style.css" />
   <script src="./script.js" defer></script>
+
+  <!-- icons -->
+  <script src="https://kit.fontawesome.com/384138011e.js" crossorigin="anonymous"></script>
 </head>
 <body>
 
@@ -27,7 +30,7 @@
         <label for="login-password">Password</label>
         <div class="password-wrap">
           <input type="password" id="login-password" placeholder="Enter password" autocomplete="current-password" />
-          <button class="toggle-pw" data-target="login-password">👁</button>
+          <button class="toggle-pw" data-target="login-password"><i class="fa-solid fa-eye"></i></button>
         </div>
 
         <label class="remember-label">
@@ -55,13 +58,13 @@
         <label for="reg-password">Password</label>
         <div class="password-wrap">
           <input type="password" id="reg-password" placeholder="Choose a password" autocomplete="new-password" />
-          <button class="toggle-pw" data-target="reg-password">👁</button>
+          <button class="toggle-pw" data-target="reg-password"><i class="fa-solid fa-eye"></i></button>
         </div>
 
         <label for="reg-repeat">Repeat Password</label>
         <div class="password-wrap">
           <input type="password" id="reg-repeat" placeholder="Repeat password" autocomplete="new-password" />
-          <button class="toggle-pw" data-target="reg-repeat">👁</button>
+          <button class="toggle-pw" data-target="reg-repeat"><i class="fa-solid fa-eye"></i></button>
         </div>
 
         <label for="reg-code">Access Code</label>
@@ -107,10 +110,10 @@
     </div>
 
     <div class="btns">
-      <button id="addField"><span>＋ Add new item</span></button>
-      <button id="cancelChanges"><span>↺ Revert Changes</span></button>
-      <button id="reloadApi"><span>⟳ Reload from API</span></button>
-      <button id="updateApi"><span>↑ Push to API</span></button>
+      <button id="addField"><span><i class="fa-solid fa-plus"></i> Add new item</span></button>
+      <button id="cancelChanges"><span><i class="fa-solid fa-arrow-rotate-left"></i> Revert Changes</span></button>
+      <button id="reloadApi"><span><i class="fa-solid fa-arrow-rotate-right"></i> Reload from API</span></button>
+      <button id="updateApi"><span><i class="fa-solid fa-paper-plane"></i> Push to API</span></button>
     </div>
   </div>
 

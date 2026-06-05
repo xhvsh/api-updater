@@ -630,7 +630,7 @@ header {
   border-left-color: var(--danger);
 }
 .toast-item.info {
-  border-left-color: var(--accent);
+  border-left-color: #4cb7d1;
 }
 
 /* dismissable alert toasts have an extra dismiss class */
@@ -650,7 +650,7 @@ header {
   color: var(--danger);
 }
 .toast-item.info .toast-icon {
-  color: var(--accent2);
+  color: #4cb7d1;
 }
 
 .toast-body {
@@ -670,7 +670,7 @@ header {
   color: var(--danger);
 }
 .toast-item.info .toast-title {
-  color: var(--accent2);
+  color: #4cb7d1;
 }
 
 .toast-msg {
@@ -713,7 +713,7 @@ header {
   background: var(--danger);
 }
 .toast-item.info .toast-progress {
-  background: var(--accent);
+  background: #4cb7d1;
 }
 
 @keyframes toastIn {
@@ -786,7 +786,7 @@ header {
 .item-inner {
   display: flex;
   align-items: flex-start;
-  gap: 0.5rem;
+  gap: 0.7rem;
 }
 
 .drag-handle {
@@ -800,7 +800,7 @@ header {
 
 .item-index {
   color: var(--muted);
-  font-size: 0.71rem;
+  font-size: 1rem;
   min-width: 24px;
   padding-top: 0.25rem;
   flex-shrink: 0;
