@@ -1,120 +1,138 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>GDG API Editor</title>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="style.css" />
-  </head>
-  <body>
-    <div id="app">
-      <!-- login -->
-      <div id="login-screen">
-        <div class="login-card">
-          <div class="login-logo">
-            <div class="login-logo-icon">
-              <img src="./img/gdg.webp" alt="GDG" class="logo-img" />
-            </div>
-            <div>
-              <h1>GDG API Editor</h1>
-              <p>GD Gamers Iceberg - made by xhvsh</p>
-            </div>
-          </div>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GDG API Editor</title>
+  <link rel="stylesheet" href="./style.css" />
+  <script src="./script.js" defer></script>
+</head>
+<body>
 
-          <label class="field-label" for="key-input">Access Key</label>
-          <div class="input-wrap">
-            <input type="password" id="key-input" placeholder="Enter your key..." autocomplete="off" />
-            <button class="toggle-vis" id="toggle-vis" title="Show / hide">👁</button>
-          </div>
+  <!-- AUTH WRAPPER -->
+  <div id="auth-wrapper">
 
-          <div class="remember-row">
-            <input type="checkbox" id="remember-key" checked />
-            <label for="remember-key">Remember on this browser</label>
-          </div>
+    <!-- LOGIN SCREEN -->
+    <div id="login-screen" class="auth-screen">
+      <img src="./img/gdg.webp" alt="GDG" class="auth-logo" />
+      <h1>GDG API Editor</h1>
+      <p class="auth-sub">GD Gamers Iceberg - made by xhvsh</p>
 
-          <button class="btn btn-primary" id="login-btn">⌗ &nbsp;Authenticate &amp; Load</button>
-          <div class="alert alert-error" id="login-error"></div>
+      <div class="auth-card">
+        <h2>Login</h2>
+
+        <label for="login-username">Username</label>
+        <input type="text" id="login-username" placeholder="Enter username" autocomplete="username" />
+
+        <label for="login-password">Password</label>
+        <div class="password-wrap">
+          <input type="password" id="login-password" placeholder="Enter password" autocomplete="current-password" />
+          <button class="toggle-pw" data-target="login-password">👁</button>
         </div>
+
+        <label class="remember-label">
+          <input type="checkbox" id="remember-me" />
+          Remember on this browser
+        </label>
+
+        <button class="btn-primary" id="login-btn">Login</button>
+        <p class="auth-switch">Don't have an account? <a href="#" id="go-register">Register</a></p>
       </div>
-
-      <!-- editor -->
-      <div id="editor-screen">
-        <div class="topbar">
-          <div class="topbar-left">
-            <div class="topbar-icon">
-              <img src="./img/gdg.webp" alt="GDG" class="logo-img" />
-            </div>
-            <h2>GDG API Editor</h2>
-            <span class="topbar-badge">Live</span>
-            <div class="unsaved-dot" id="unsaved-dot" title="Unsaved changes"></div>
-          </div>
-          <div class="topbar-right">
-            <div class="key-indicator">
-              <span class="key-dot"></span>
-              <span id="key-display">••••••••</span>
-            </div>
-            <button class="btn btn-ghost btn-sm" id="logout-btn">Logout</button>
-          </div>
-        </div>
-
-        <div class="editor-main">
-          <div class="status-bar">
-            <div class="status-left">
-              <div class="count-badge"><span id="item-count">0</span> items</div>
-              <div class="search-wrap">
-                <span class="search-icon">⌕</span>
-                <input type="text" id="search-input" placeholder="Filter items..." />
-              </div>
-            </div>
-            <div class="status-right">
-              <button class="btn btn-ghost btn-sm" id="cancel-btn">↺ Revert</button>
-              <button class="btn btn-ghost btn-sm" id="add-btn">+ Add Item</button>
-            </div>
-          </div>
-
-          <div class="items-container" id="items-list">
-            <div class="empty-state" id="empty-state">
-              <div class="empty-icon">◇</div>
-              <p>No items loaded</p>
-            </div>
-          </div>
-
-          <button class="add-field-btn" id="add-btn-bottom">&#xff0b; &nbsp;Add new item</button>
-        </div>
-
-        <div class="footer-bar">
-          <button class="btn btn-ghost btn-sm" id="cancel-btn-2">↺ Revert Changes</button>
-          <div class="spacer"></div>
-          <button class="btn btn-ghost btn-sm" id="refresh-btn">⟳ Reload from API</button>
-          <button class="btn btn-success btn-sm" id="update-btn">↑ Push to API</button>
-        </div>
-      </div>
-
-      <!-- loading -->
-      <div class="loading-overlay" id="loading">
-        <div class="loading-box">
-          <div class="spinner"></div>
-          <div class="loading-text" id="loading-text">Loading...</div>
-        </div>
-      </div>
-
-      <!-- confirming -->
-      <div class="dialog-overlay" id="dialog">
-        <div class="dialog-box">
-          <div class="dialog-title" id="dialog-title">Confirm</div>
-          <div class="dialog-msg" id="dialog-msg"></div>
-          <div class="dialog-btns">
-            <button class="btn btn-ghost btn-sm" id="dialog-cancel">Cancel</button>
-            <button class="btn btn-danger btn-sm" id="dialog-confirm">Confirm</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- toast -->
-      <div id="toast"></div>
     </div>
 
-    <script src="script.js"></script>
-  </body>
+    <!-- REGISTER SCREEN -->
+    <div id="register-screen" class="auth-screen hidden">
+      <img src="./img/gdg.webp" alt="GDG" class="auth-logo" />
+      <h1>GDG API Editor</h1>
+      <p class="auth-sub">GD Gamers Iceberg - made by xhvsh</p>
+
+      <div class="auth-card">
+        <h2>Register</h2>
+
+        <label for="reg-username">Username</label>
+        <input type="text" id="reg-username" placeholder="Choose a username" autocomplete="username" />
+
+        <label for="reg-password">Password</label>
+        <div class="password-wrap">
+          <input type="password" id="reg-password" placeholder="Choose a password" autocomplete="new-password" />
+          <button class="toggle-pw" data-target="reg-password">👁</button>
+        </div>
+
+        <label for="reg-repeat">Repeat Password</label>
+        <div class="password-wrap">
+          <input type="password" id="reg-repeat" placeholder="Repeat password" autocomplete="new-password" />
+          <button class="toggle-pw" data-target="reg-repeat">👁</button>
+        </div>
+
+        <label for="reg-code">Access Code</label>
+        <input type="text" id="reg-code" placeholder="Enter access code" />
+
+        <button class="btn-primary" id="register-btn">Register</button>
+        <p class="auth-switch">Already have an account? <a href="#" id="go-login">Login</a></p>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- MAIN APP (hidden until logged in) -->
+  <div id="app" class="hidden">
+    <header>
+      <img src="./img/gdg.webp" alt="GDG" class="header-logo" />
+      <div class="header-info">
+        <h2>GDG API Editor</h2>
+        <span class="status-badge" id="status-badge">Live</span>
+        <div id="unsaved-dot" title="Unsaved changes"></div>
+      </div>
+      <div class="header-welcome">
+        Welcome, <span id="welcome-username"></span>
+      </div>
+      <div class="header-right">
+        <span id="logged-in-user" class="username-display"></span>
+        <button id="logout-btn">Logout</button>
+      </div>
+    </header>
+
+    <div class="toolbar">
+      <div class="toolbar-inner">
+        <span id="item-count">0 items</span>
+        <input type="text" id="search-input" placeholder="⌕ Search..." />
+      </div>
+    </div>
+
+    <div class="container" id="item-container">
+      <div class="empty-state">
+        <span>◇</span>
+        <p>No items loaded</p>
+      </div>
+    </div>
+
+    <div class="btns">
+      <button id="addField"><span>＋ Add new item</span></button>
+      <button id="cancelChanges"><span>↺ Revert Changes</span></button>
+      <button id="reloadApi"><span>⟳ Reload from API</span></button>
+      <button id="updateApi"><span>↑ Push to API</span></button>
+    </div>
+  </div>
+
+  <!-- LOADING OVERLAY -->
+  <div id="loading-overlay" class="hidden">
+    <div class="spinner"></div>
+    <p>Loading...</p>
+  </div>
+
+  <!-- CONFIRM MODAL -->
+  <div id="confirm-modal" class="modal hidden">
+    <div class="modal-box">
+      <p id="confirm-message">Are you sure?</p>
+      <div class="modal-btns">
+        <button id="confirm-yes">Confirm</button>
+        <button id="confirm-no">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST CONTAINER -->
+  <div id="toast"></div>
+
+</body>
 </html>

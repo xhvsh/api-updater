@@ -1,66 +1,117 @@
-// configuration stuff
+// config
+const SUPABASE_URL = "https://qaamikaezvpvpjfthyel.supabase.co/functions/v1";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhYW1pa2FlenZwdnBqZnRoeWVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0MjEzNDQsImV4cCI6MjA5NTk5NzM0NH0.ehhuxetOIiu2MTJMO4RR5hIt5RaDkfkV6_uDUbz2PqQ";
+const STORAGE_KEY = "gdg_remember";
+
 const GIST_ID = "ec578df51c8684fd9729ee86958c4dbc";
 const GIST_FILE = "api.json";
-const API_URL = `https://api.github.com/gists/${GIST_ID}`;
-const LS_KEY = "gdg_key";
+const GIST_URL = `https://api.github.com/gists/${GIST_ID}`;
 
-// Bruteforce protection
-const MAX_ATTEMPTS = 3; // max failed logins
-const LOCKOUT_MS = 600000; // lockout time
-const ATTEMPT_KEY = "gdg_attempts";
-const LOCKOUT_KEY = "gdg_lockout";
+const PUBLIC_HEADERS = {
+  "Content-Type": "application/json",
+  apikey: SUPABASE_ANON_KEY,
+  Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+};
 
-// state
+// states
 let ghToken = "";
-let apiData = []; // [{ phrase, explanation }, ...]
+let apiData = [];
 let originalData = [];
 let dragSrcIdx = null;
 let hasUnsaved = false;
 let searchTerm = "";
 
-// dom helpers
+// remove old key system
+localStorage.removeItem("gdg_key");
+
+// helpers
 const $ = (id) => document.getElementById(id);
 
 function setLoading(show, text = "Loading...") {
-  $("loading-text").textContent = text;
-  $("loading").style.display = show ? "flex" : "none";
+  const overlay = $("loading-overlay");
+  const p = overlay.querySelector("p");
+  if (p) p.textContent = text;
+  overlay.classList.toggle("hidden", !show);
 }
 
+/* Toast (plain, auto-dismiss) */
 function toast(msg, type = "info") {
-  const icons = { success: "✓", error: "✗", info: "&#x2139;" };
-  const el = document.createElement("div");
-  el.className = `toast-item ${type}`;
-  el.innerHTML = `<span>${icons[type]}</span>${escHtml(msg)}`;
-  $("toast").appendChild(el);
-  setTimeout(() => el.remove(), 3400);
+  const labels = { success: "Success", error: "Error", info: "Info" };
+  const icons = { success: "✓", error: "✗", info: "ℹ" };
+  _spawnToast(labels[type] ?? "Info", msg, type, 3400, false);
 }
 
+/* Alert toast (requires dismiss, resolves promise on close) */
+function showAlert(msg, type = "info") {
+  return new Promise((resolve) => {
+    const labels = { success: "Done", error: "Error", info: "Note" };
+    _spawnToast(labels[type] ?? "Note", msg, type, 5000, true, resolve);
+  });
+}
+
+function _spawnToast(title, msg, type, duration, dismissable, onClose) {
+  const icons = { success: "✓", error: "✗", info: "ℹ" };
+  const container = $("toast");
+
+  const el = document.createElement("div");
+  el.className = `toast-item ${type}${dismissable ? " alert-toast" : ""}`;
+  el.style.setProperty("--duration", duration + "ms");
+
+  el.innerHTML = `
+    <span class="toast-icon">${icons[type] ?? "ℹ"}</span>
+    <div class="toast-body">
+      <div class="toast-title">${escHtml(title)}</div>
+      <div class="toast-msg">${escHtml(msg)}</div>
+    </div>
+    <button class="toast-close" title="Dismiss">✕</button>
+    <div class="toast-progress"></div>`;
+
+  container.appendChild(el);
+
+  const dismiss = () => {
+    el.style.animation = "toastOut .22s ease forwards";
+    setTimeout(() => {
+      el.remove();
+      if (onClose) onClose();
+    }, 220);
+  };
+
+  el.querySelector(".toast-close").addEventListener("click", dismiss);
+
+  // auto-dismiss
+  const timer = setTimeout(dismiss, duration);
+  el.querySelector(".toast-close").addEventListener("click", () => clearTimeout(timer), { once: true });
+}
+
+/* ── Confirm modal ── */
 function showConfirm(title, msg) {
   return new Promise((resolve) => {
-    $("dialog-title").textContent = title;
-    $("dialog-msg").textContent = msg;
-    $("dialog").style.display = "flex";
+    $("confirm-message").textContent = `${title} — ${msg}`;
+    $("confirm-modal").classList.remove("hidden");
 
-    // Replace nodes to strip old listeners
-    const yes = $("dialog-confirm");
-    const no = $("dialog-cancel");
+    const yes = $("confirm-yes");
+    const no = $("confirm-no");
     const yesClone = yes.cloneNode(true);
     const noClone = no.cloneNode(true);
     yes.replaceWith(yesClone);
     no.replaceWith(noClone);
 
     const done = (val) => {
-      $("dialog").style.display = "none";
+      $("confirm-modal").classList.add("hidden");
       resolve(val);
     };
-    $("dialog-confirm").onclick = () => done(true);
-    $("dialog-cancel").onclick = () => done(false);
+    $("confirm-yes").onclick = () => done(true);
+    $("confirm-no").onclick = () => done(false);
+    $("confirm-modal").onclick = (e) => {
+      if (e.target === $("confirm-modal")) done(false);
+    };
   });
 }
 
 function markUnsaved(val = true) {
   hasUnsaved = val;
-  $("unsaved-dot").classList.toggle("show", val);
+  const dot = $("unsaved-dot");
+  if (dot) dot.classList.toggle("show", val);
 }
 
 function deepCopy(x) {
@@ -80,85 +131,134 @@ function autoResize(ta) {
   ta.style.height = ta.scrollHeight + "px";
 }
 
-// silly bruteforce protection made by ai lol (its easily bypassed by clearing localStorage)
+/* REMEMBER-ME (stores username + password) */
 
-/** Returns remaining lockout ms, or 0 if not locked. */
-function getLockoutRemaining() {
-  const until = parseInt(localStorage.getItem(LOCKOUT_KEY) ?? "0", 10);
-  const remaining = until - Date.now();
-  return remaining > 0 ? remaining : 0;
+function saveCredentials(username, password) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ username, password }));
+  } catch (_) {}
+}
+function loadCredentials() {
+  try {
+    const r = localStorage.getItem(STORAGE_KEY);
+    return r ? JSON.parse(r) : null;
+  } catch (_) {
+    return null;
+  }
+}
+function clearCredentials() {
+  localStorage.removeItem(STORAGE_KEY);
 }
 
-/** Returns current failed attempt count. */
-function getAttempts() {
-  return parseInt(localStorage.getItem(ATTEMPT_KEY) ?? "0", 10);
+/* AUTH SCREENS */
+
+function showScreen(id) {
+  document.querySelectorAll(".auth-screen").forEach((s) => s.classList.add("hidden"));
+  const el = $(id);
+  if (el) el.classList.remove("hidden");
 }
 
-/** Record a failed attempt; triggers lockout if limit hit. */
-function recordFailedAttempt() {
-  const attempts = getAttempts() + 1;
-  localStorage.setItem(ATTEMPT_KEY, attempts);
-  if (attempts >= MAX_ATTEMPTS) {
-    localStorage.setItem(LOCKOUT_KEY, Date.now() + LOCKOUT_MS);
-    localStorage.setItem(ATTEMPT_KEY, "0");
+/* REGISTER */
+
+async function register() {
+  const username = $("reg-username").value.trim();
+  const password = $("reg-password").value;
+  const repeat = $("reg-repeat").value;
+  const accessCode = $("reg-code").value.trim();
+
+  if (!username || !password || !repeat || !accessCode) return showAlert("Please fill in all fields.", "error");
+  if (password !== repeat) return showAlert("Passwords do not match.", "error");
+
+  setLoading(true, "Registering...");
+  try {
+    const res = await fetch(`${SUPABASE_URL}/register`, {
+      method: "POST",
+      headers: PUBLIC_HEADERS,
+      body: JSON.stringify({ username, password, accessCode }),
+    });
+    const data = await res.json();
+    if (!res.ok) return showAlert(data.error || "Registration failed.", "error");
+
+    $("login-username").value = username;
+    showScreen("login-screen");
+    showAlert("Registration successful! Please log in.", "success");
+  } catch (err) {
+    showAlert("Network error: " + err.message, "error");
+  } finally {
+    setLoading(false);
   }
 }
 
-/** Clear fail counter after a successful login. */
-function clearAttempts() {
-  localStorage.removeItem(ATTEMPT_KEY);
-  localStorage.removeItem(LOCKOUT_KEY);
+/* LOGIN */
+
+async function login() {
+  const username = $("login-username").value.trim();
+  const password = $("login-password").value;
+  const remember = $("remember-me").checked;
+
+  if (!username || !password) return showAlert("Please enter your username and password.", "error");
+
+  setLoading(true, "Logging in...");
+  try {
+    const res = await fetch(`${SUPABASE_URL}/login`, {
+      method: "POST",
+      headers: PUBLIC_HEADERS,
+      body: JSON.stringify({ username, password }),
+    });
+    const data = await res.json();
+    if (!res.ok) return showAlert(data.error || "Login failed.", "error");
+
+    const token = data.apiKey || "";
+    if (remember) saveCredentials(username, password);
+    else clearCredentials();
+
+    enterApp(username, token);
+  } catch (err) {
+    showAlert("Network error: " + err.message, "error");
+  } finally {
+    setLoading(false);
+  }
 }
 
-/** Format milliseconds as "Xm Ys". */
-function formatMs(ms) {
-  const s = Math.ceil(ms / 1000);
-  const m = Math.floor(s / 60);
-  return m > 0 ? `${m}m ${s % 60}s` : `${s}s`;
+/* APP ENTRY / LOGOUT */
+
+function enterApp(username, token) {
+  ghToken = token;
+  $("auth-wrapper").classList.add("hidden");
+  $("app").classList.remove("hidden");
+  $("logged-in-user").textContent = username;
+  $("welcome-username").textContent = username;
+  loadGist();
 }
 
-/** Show lockout message and count down on the error element. */
-let lockoutTimer = null;
-
-function startLockoutUI() {
-  if (lockoutTimer) clearInterval(lockoutTimer);
-  const errEl = $("login-error");
-  const btn = $("login-btn");
-  btn.disabled = true;
-
-  lockoutTimer = setInterval(() => {
-    const rem = getLockoutRemaining();
-    if (rem <= 0) {
-      clearInterval(lockoutTimer);
-      lockoutTimer = null;
-      btn.disabled = false;
-      errEl.style.display = "none";
-      return;
-    }
-    errEl.textContent = `Too many failed attempts. Try again in ${formatMs(rem)}.`;
-    errEl.style.display = "block";
-  }, 500);
-
-  // Trigger immediately
-  const rem = getLockoutRemaining();
-  errEl.textContent = `Too many failed attempts. Try again in ${formatMs(rem)}.`;
-  errEl.style.display = "block";
+async function logout() {
+  if (hasUnsaved) {
+    const ok = await showConfirm("Unsaved changes", "You have unsaved changes. Logout anyway?");
+    if (!ok) return;
+  }
+  ghToken = "";
+  apiData = [];
+  originalData = [];
+  markUnsaved(false);
+  $("app").classList.add("hidden");
+  $("auth-wrapper").classList.remove("hidden");
+  showScreen("login-screen");
+  $("item-container").innerHTML = `<div class="empty-state"><span>◇</span><p>No items loaded</p></div>`;
+  updateCount();
 }
 
-// api
+/* GIST API */
+
 async function loadGist() {
   setLoading(true, "Fetching data...");
   try {
-    const res = await fetch(API_URL, {
+    const res = await fetch(GIST_URL, {
       headers: {
         Authorization: `token ${ghToken}`,
         Accept: "application/vnd.github.v3+json",
       },
     });
-
-    if (res.status === 401 || res.status === 403) {
-      throw new Error("Invalid key.");
-    }
+    if (res.status === 401 || res.status === 403) throw new Error("Invalid API key.");
     if (!res.ok) throw new Error(`Network error (${res.status})`);
 
     const json = await res.json();
@@ -173,7 +273,6 @@ async function loadGist() {
     toast("Loaded successfully", "success");
   } catch (err) {
     toast(err.message, "error");
-    throw err;
   } finally {
     setLoading(false);
   }
@@ -182,7 +281,7 @@ async function loadGist() {
 async function pushGist() {
   setLoading(true, "Pushing changes...");
   try {
-    const res = await fetch(API_URL, {
+    const res = await fetch(GIST_URL, {
       method: "PATCH",
       headers: {
         Authorization: `token ${ghToken}`,
@@ -190,15 +289,10 @@ async function pushGist() {
         Accept: "application/vnd.github.v3+json",
       },
       body: JSON.stringify({
-        files: {
-          [GIST_FILE]: {
-            content: JSON.stringify({ data: apiData }, null, 2),
-          },
-        },
+        files: { [GIST_FILE]: { content: JSON.stringify({ data: apiData }, null, 2) } },
       }),
     });
-
-    if (res.status === 401 || res.status === 403) throw new Error("Invalid key.");
+    if (res.status === 401 || res.status === 403) throw new Error("Invalid API key.");
     if (!res.ok) throw new Error(`Push failed (${res.status})`);
 
     originalData = deepCopy(apiData);
@@ -211,19 +305,31 @@ async function pushGist() {
   }
 }
 
-// render
-function renderItems() {
-  const list = $("items-list");
-  $("item-count").textContent = apiData.length;
+/* RENDER */
 
-  // Remove old cards, keep the empty-state div
-  list.querySelectorAll(".item-card").forEach((c) => c.remove());
+function updateCount() {
+  $("item-count").textContent = `${apiData.length} items`;
+}
+
+function renderItems() {
+  const container = $("item-container");
+  updateCount();
+  container.querySelectorAll(".item-card").forEach((c) => c.remove());
 
   const filtered = apiData.map((item, i) => ({ item, i })).filter(({ item }) => !searchTerm || item.phrase?.toLowerCase().includes(searchTerm) || item.explanation?.toLowerCase().includes(searchTerm));
 
-  $("empty-state").style.display = apiData.length === 0 ? "flex" : "none";
+  const empty =
+    container.querySelector(".empty-state") ||
+    (() => {
+      const d = document.createElement("div");
+      d.className = "empty-state";
+      d.innerHTML = `<span>◇</span><p>No items loaded</p>`;
+      container.appendChild(d);
+      return d;
+    })();
+  empty.style.display = apiData.length === 0 ? "flex" : "none";
 
-  filtered.forEach(({ item, i }) => list.appendChild(buildCard(item, i)));
+  filtered.forEach(({ item, i }) => container.appendChild(buildCard(item, i)));
 }
 
 function buildCard(item, index) {
@@ -243,66 +349,44 @@ function buildCard(item, index) {
         <div class="field-row">
           <div class="field-key">phrase</div>
           <div class="field-val">
-            <input
-              type="text"
-              class="phrase-input"
-              spellcheck="false"
-              placeholder="Short phrase..."
-              value="${escHtml(item.phrase ?? "")}"
-            />
+            <input type="text" class="phrase-input" spellcheck="false"
+              placeholder="Short phrase..." value="${escHtml(item.phrase ?? "")}" />
           </div>
         </div>
         <div class="field-row">
           <div class="field-key">explanation</div>
           <div class="field-val">
-            <textarea
-              class="expl-textarea"
-              rows="1"
-              spellcheck="false"
-              placeholder="Explanation..."
-            >${escHtml(item.explanation ?? "")}</textarea>
+            <textarea class="expl-textarea" rows="1" spellcheck="false"
+              placeholder="Explanation...">${escHtml(item.explanation ?? "")}</textarea>
           </div>
         </div>
       </div>
       <div class="item-actions">
-        <button class="item-btn mv up-btn"  title="Move up"   ${isFirst ? "disabled" : ""}>↑</button>
-        <button class="item-btn mv dn-btn"  title="Move down" ${isLast ? "disabled" : ""}>↓</button>
-        <button class="item-btn dup dup-btn" title="Duplicate">⧉</button>
-        <button class="item-btn del del-btn" title="Delete">✕</button>
+        <button class="item-btn up-btn"  title="Move up"   ${isFirst ? "disabled" : ""}>↑</button>
+        <button class="item-btn dn-btn"  title="Move down" ${isLast ? "disabled" : ""}>↓</button>
+        <button class="item-btn dup-btn" title="Duplicate">⧉</button>
+        <button class="item-btn del-btn" title="Delete">✕</button>
       </div>
     </div>`;
 
   const phraseInput = card.querySelector(".phrase-input");
   const explTa = card.querySelector(".expl-textarea");
 
-  // auto-resize explanation
   setTimeout(() => autoResize(explTa), 0);
 
-  // prevent newlines in phrase
   phraseInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter") e.preventDefault();
   });
-  phraseInput.addEventListener("paste", (e) => {
-    e.preventDefault();
-    const text = (e.clipboardData || window.clipboardData)
-      .getData("text")
-      .replace(/[\r\n]+/g, " ")
-      .trim();
-    document.execCommand("insertText", false, text);
-  });
-
   phraseInput.addEventListener("input", () => {
     apiData[Number(card.dataset.index)].phrase = phraseInput.value;
     markUnsaved();
   });
-
   explTa.addEventListener("input", () => {
     autoResize(explTa);
     apiData[Number(card.dataset.index)].explanation = explTa.value;
     markUnsaved();
   });
 
-  // action buttons
   card.querySelector(".del-btn").addEventListener("click", async () => {
     const i = Number(card.dataset.index);
     const ok = await showConfirm("Delete item?", `Remove #${i + 1}: "${apiData[i].phrase || "(empty)"}"?`);
@@ -337,44 +421,34 @@ function buildCard(item, index) {
     renderItems();
   });
 
-  // drag n drop
+  // drag & drop
   card.addEventListener("dragstart", (e) => {
     dragSrcIdx = Number(card.dataset.index);
     card.classList.add("dragging");
     e.dataTransfer.effectAllowed = "move";
   });
-
   card.addEventListener("dragend", () => {
     card.classList.remove("dragging");
     document.querySelectorAll(".item-card").forEach((c) => c.classList.remove("drag-above", "drag-below"));
   });
-
   card.addEventListener("dragover", (e) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
     const { top, height } = card.getBoundingClientRect();
-    const mid = top + height / 2;
     document.querySelectorAll(".item-card").forEach((c) => c.classList.remove("drag-above", "drag-below"));
-    card.classList.add(e.clientY < mid ? "drag-above" : "drag-below");
+    card.classList.add(e.clientY < top + height / 2 ? "drag-above" : "drag-below");
   });
-
   card.addEventListener("dragleave", () => card.classList.remove("drag-above", "drag-below"));
-
   card.addEventListener("drop", (e) => {
     e.preventDefault();
     card.classList.remove("drag-above", "drag-below");
-
     const targetIdx = Number(card.dataset.index);
     if (dragSrcIdx === null || dragSrcIdx === targetIdx) return;
-
     const { top, height } = card.getBoundingClientRect();
-    const mid = top + height / 2;
-    let insertAt = e.clientY < mid ? targetIdx : targetIdx + 1;
-
+    let insertAt = e.clientY < top + height / 2 ? targetIdx : targetIdx + 1;
     const [moved] = apiData.splice(dragSrcIdx, 1);
     if (insertAt > dragSrcIdx) insertAt--;
     apiData.splice(insertAt, 0, moved);
-
     dragSrcIdx = null;
     markUnsaved();
     renderItems();
@@ -383,116 +457,51 @@ function buildCard(item, index) {
   return card;
 }
 
-// auth
-async function doLogin() {
-  const errEl = $("login-error");
-  errEl.style.display = "none";
+/* INIT */
 
-  // Check lockout first
-  const rem = getLockoutRemaining();
-  if (rem > 0) {
-    startLockoutUI();
-    return;
-  }
-
-  const key = $("key-input").value.trim();
-  if (!key) {
-    errEl.textContent = "Please enter your key.";
-    errEl.style.display = "block";
-    return;
-  }
-
-  ghToken = key;
-
-  try {
-    await loadGist();
-
-    // Success — clear lockout, save if remembered
-    clearAttempts();
-    if ($("remember-key").checked) {
-      localStorage.setItem(LS_KEY, ghToken);
-    } else {
-      localStorage.removeItem(LS_KEY);
-    }
-
-    // Show editor
-    $("login-screen").style.display = "none";
-    $("editor-screen").style.display = "flex";
-    $("key-display").textContent = ghToken.slice(0, 4) + "••••" + ghToken.slice(-3);
-  } catch {
-    ghToken = "";
-    recordFailedAttempt();
-
-    const attempts = getAttempts();
-    const newLockout = getLockoutRemaining();
-
-    if (newLockout > 0) {
-      startLockoutUI();
-    } else {
-      const left = MAX_ATTEMPTS - attempts;
-      errEl.textContent = `Incorrect key. ${left} attempt${left !== 1 ? "s" : ""} remaining.`;
-      errEl.style.display = "block";
-    }
-  }
-}
-
-async function doLogout() {
-  if (hasUnsaved) {
-    const ok = await showConfirm("Unsaved changes", "You have unsaved changes. Logout anyway?");
-    if (!ok) return;
-  }
-  localStorage.removeItem(LS_KEY);
-  ghToken = "";
-  apiData = [];
-  originalData = [];
-  markUnsaved(false);
-  $("editor-screen").style.display = "none";
-  $("login-screen").style.display = "flex";
-  $("key-input").value = "";
-  $("login-error").style.display = "none";
-  toast("Logged out", "info");
-}
-
-// init
 document.addEventListener("DOMContentLoaded", () => {
-  // Restore saved key
-  const saved = localStorage.getItem(LS_KEY);
-  if (saved) $("key-input").value = saved;
-
-  // Resume lockout if page was refreshed mid-lockout
-  if (getLockoutRemaining() > 0) startLockoutUI();
-
-  // Toggle key visibility
-  $("toggle-vis").addEventListener("click", () => {
-    const inp = $("key-input");
-    inp.type = inp.type === "password" ? "text" : "password";
+  $("go-register").addEventListener("click", (e) => {
+    e.preventDefault();
+    showScreen("register-screen");
+  });
+  $("go-login").addEventListener("click", (e) => {
+    e.preventDefault();
+    showScreen("login-screen");
   });
 
-  // Login
-  $("login-btn").addEventListener("click", doLogin);
-  $("key-input").addEventListener("keydown", (e) => {
-    if (e.key === "Enter") doLogin();
+  document.querySelectorAll(".toggle-pw").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const input = $(btn.dataset.target);
+      input.type = input.type === "password" ? "text" : "password";
+    });
   });
 
-  // Logout
-  $("logout-btn").addEventListener("click", doLogout);
+  $("register-btn").addEventListener("click", register);
+  $("login-btn").addEventListener("click", login);
+  $("logout-btn").addEventListener("click", logout);
 
-  // Add item
+  ["login-username", "login-password"].forEach((id) => {
+    $(id).addEventListener("keydown", (e) => {
+      if (e.key === "Enter") login();
+    });
+  });
+
+  $("search-input").addEventListener("input", (e) => {
+    searchTerm = e.target.value.toLowerCase().trim();
+    renderItems();
+  });
+
   const addItem = () => {
     apiData.push({ phrase: "", explanation: "" });
     markUnsaved();
     renderItems();
     setTimeout(() => {
       const cards = document.querySelectorAll(".item-card");
-      if (cards.length) {
-        cards[cards.length - 1].querySelector(".phrase-input")?.focus();
-      }
+      if (cards.length) cards[cards.length - 1].querySelector(".phrase-input")?.focus();
     }, 50);
   };
-  $("add-btn").addEventListener("click", addItem);
-  $("add-btn-bottom").addEventListener("click", addItem);
+  $("addField").addEventListener("click", addItem);
 
-  // Revert
   const revert = async () => {
     if (!hasUnsaved) return;
     const ok = await showConfirm("Revert changes", "Discard all unsaved changes?");
@@ -502,14 +511,10 @@ document.addEventListener("DOMContentLoaded", () => {
     renderItems();
     toast("Changes reverted", "info");
   };
-  $("cancel-btn").addEventListener("click", revert);
-  $("cancel-btn-2").addEventListener("click", revert);
+  $("cancelChanges").addEventListener("click", revert);
 
-  // Push
-  $("update-btn").addEventListener("click", pushGist);
-
-  // Reload from API
-  $("refresh-btn").addEventListener("click", async () => {
+  $("updateApi").addEventListener("click", pushGist);
+  $("reloadApi").addEventListener("click", async () => {
     if (hasUnsaved) {
       const ok = await showConfirm("Reload", "Unsaved changes will be lost. Continue?");
       if (!ok) return;
@@ -517,17 +522,20 @@ document.addEventListener("DOMContentLoaded", () => {
     await loadGist();
   });
 
-  // Search / filter
-  $("search-input").addEventListener("input", (e) => {
-    searchTerm = e.target.value.toLowerCase().trim();
-    renderItems();
-  });
-
-  // Warn on accidental close with unsaved changes
   window.addEventListener("beforeunload", (e) => {
     if (hasUnsaved) {
       e.preventDefault();
       e.returnValue = "";
     }
   });
+
+  // Pre-fill from remember-me (no auto-login)
+  const saved = loadCredentials();
+  if (saved?.username) {
+    $("login-username").value = saved.username;
+    $("remember-me").checked = true;
+  }
+  if (saved?.password) {
+    $("login-password").value = saved.password;
+  }
 });
