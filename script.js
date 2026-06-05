@@ -18,6 +18,9 @@ let successIcon = `<i class="fa-solid fa-circle-check"></i>`;
 let errorIcon = `<i class="fa-solid fa-circle-xmark"></i>`;
 let infoIcon = `<i class="fa-solid fa-circle-info"></i>`;
 
+// Public raw gist URL - no auth required, readable by anyone
+const GIST_RAW_URL = "https://gist.githubusercontent.com/xhvsh/ec578df51c8684fd9729ee86958c4dbc/raw/api.json";
+
 // states
 let ghToken = "";
 let apiData = [];
@@ -25,6 +28,7 @@ let originalData = [];
 let dragSrcIdx = null;
 let hasUnsaved = false;
 let searchTerm = "";
+let isGuest = false;
 
 // remove old key system
 localStorage.removeItem("gdg_key");
@@ -91,7 +95,7 @@ function _spawnToast(title, msg, type, duration, dismissable, onClose) {
 /* ── Confirm modal ── */
 function showConfirm(title, msg) {
   return new Promise((resolve) => {
-    $("confirm-message").textContent = `${title} — ${msg}`;
+    $("confirm-message").textContent = `${title} - ${msg}`;
     $("confirm-modal").classList.remove("hidden");
 
     const yes = $("confirm-yes");
@@ -217,7 +221,7 @@ async function login() {
     if (remember) saveCredentials(username, password);
     else clearCredentials();
 
-    enterApp(username, token);
+    enterApp(username, token, false);
   } catch (err) {
     showAlert("Network error: " + err.message, "error");
   } finally {
@@ -225,34 +229,115 @@ async function login() {
   }
 }
 
+/* GUEST MODE */
+
+function enterGuest() {
+  isGuest = true;
+  enterApp("Guest", "", true);
+}
+
 /* APP ENTRY / LOGOUT */
 
-function enterApp(username, token) {
+function enterApp(username, token, guestMode = false) {
   ghToken = token;
+  isGuest = guestMode;
+
   $("auth-wrapper").classList.add("hidden");
   $("app").classList.remove("hidden");
-  $("logged-in-user").innerHTML = `<i class="fa-solid fa-circle-user"></i> ${username}`;
+
+  // Username display
+  const userDisplay = $("logged-in-user");
+  userDisplay.innerHTML = `<i class="fa-solid fa-${guestMode ? "eye" : "circle-user"}"></i> ${username}`;
+  if (guestMode) userDisplay.classList.add("guest");
+  else userDisplay.classList.remove("guest");
+
   $("welcome-username").textContent = username;
-  loadGist();
+
+  // Status badge
+  const badge = $("status-badge");
+  if (guestMode) {
+    badge.innerHTML = '<span class="status-dot"></span>Preview';
+    badge.classList.add("preview");
+  } else {
+    badge.innerHTML = '<span class="status-dot"></span>Live';
+    badge.classList.remove("preview");
+  }
+
+  // Guest banner
+  if (guestMode) {
+    $("guest-banner").classList.remove("hidden");
+  } else {
+    $("guest-banner").classList.add("hidden");
+  }
+
+  // Push to API button
+  const updateBtn = $("updateApi");
+  if (guestMode) {
+    updateBtn.disabled = true;
+    updateBtn.classList.add("guest-disabled");
+    updateBtn.title = "Login to push changes to the API";
+    updateBtn.querySelector("span").innerHTML = '<i class="fa-solid fa-lock"></i> Push to API';
+  } else {
+    updateBtn.disabled = false;
+    updateBtn.classList.remove("guest-disabled");
+    updateBtn.title = "";
+    updateBtn.querySelector("span").innerHTML = '<i class="fa-solid fa-paper-plane"></i> Push to API';
+  }
+
+  if (guestMode) {
+    loadGuestData();
+  } else {
+    loadGist();
+  }
 }
 
 async function logout() {
-  if (hasUnsaved) {
+  if (hasUnsaved && !isGuest) {
     const ok = await showConfirm("Unsaved changes", "You have unsaved changes. Logout anyway?");
     if (!ok) return;
   }
   ghToken = "";
   apiData = [];
   originalData = [];
+  isGuest = false;
   markUnsaved(false);
   $("app").classList.add("hidden");
   $("auth-wrapper").classList.remove("hidden");
   showScreen("login-screen");
   $("item-container").innerHTML = `<div class="empty-state"><span>◇</span><p>No items loaded</p></div>`;
   updateCount();
+  // Reset guest-specific UI
+  $("guest-banner").classList.add("hidden");
+  $("logged-in-user").classList.remove("guest");
+  const badge = $("status-badge");
+  badge.innerHTML = '<span class="status-dot"></span>Live';
+  badge.classList.remove("preview");
+  const updateBtn = $("updateApi");
+  updateBtn.disabled = false;
+  updateBtn.classList.remove("guest-disabled");
+  updateBtn.title = "";
+  updateBtn.querySelector("span").innerHTML = '<i class="fa-solid fa-paper-plane"></i> Push to API';
 }
 
 /* GIST API */
+
+async function loadGuestData() {
+  setLoading(true, "Loading preview...");
+  try {
+    const res = await fetch(GIST_RAW_URL + "?t=" + Date.now());
+    if (!res.ok) throw new Error(`Failed to load data (${res.status})`);
+    const parsed = await res.json();
+    apiData = Array.isArray(parsed) ? parsed : (parsed.data ?? []);
+    originalData = deepCopy(apiData);
+    markUnsaved(false);
+    renderItems();
+    toast("Preview loaded - read only", "info");
+  } catch (err) {
+    toast("Could not load preview data: " + err.message, "error");
+  } finally {
+    setLoading(false);
+  }
+}
 
 async function loadGist() {
   setLoading(true, "Fetching data...");
@@ -284,6 +369,12 @@ async function loadGist() {
 }
 
 async function pushGist() {
+  // Guard: should never be reachable for guests, but just in case
+  if (isGuest) {
+    toast("Login to push changes to the API.", "error");
+    return;
+  }
+
   setLoading(true, "Pushing changes...");
   try {
     const res = await fetch(GIST_URL, {
@@ -484,6 +575,13 @@ document.addEventListener("DOMContentLoaded", () => {
   $("register-btn").addEventListener("click", register);
   $("login-btn").addEventListener("click", login);
   $("logout-btn").addEventListener("click", logout);
+  $("guest-btn").addEventListener("click", enterGuest);
+
+  // "Login to edit" link inside the guest banner goes back to login
+  $("guest-login-link").addEventListener("click", (e) => {
+    e.preventDefault();
+    logout();
+  });
 
   ["login-username", "login-password"].forEach((id) => {
     $(id).addEventListener("keydown", (e) => {
@@ -518,8 +616,19 @@ document.addEventListener("DOMContentLoaded", () => {
   };
   $("cancelChanges").addEventListener("click", revert);
 
-  $("updateApi").addEventListener("click", pushGist);
+  $("updateApi").addEventListener("click", () => {
+    if (isGuest) {
+      toast("Login required to push changes to the API.", "error");
+      return;
+    }
+    pushGist();
+  });
+
   $("reloadApi").addEventListener("click", async () => {
+    if (isGuest) {
+      toast("Guest mode - reload is not available.", "info");
+      return;
+    }
     if (hasUnsaved) {
       const ok = await showConfirm("Reload", "Unsaved changes will be lost. Continue?");
       if (!ok) return;
@@ -528,7 +637,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   window.addEventListener("beforeunload", (e) => {
-    if (hasUnsaved) {
+    if (hasUnsaved && !isGuest) {
       e.preventDefault();
       e.returnValue = "";
     }

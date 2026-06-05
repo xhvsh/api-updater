@@ -39,6 +39,11 @@
         </label>
 
         <button class="btn-primary" id="login-btn">Login</button>
+
+        <div class="auth-divider"><span>or</span></div>
+
+        <button class="btn-guest" id="guest-btn"><i class="fa-solid fa-eye"></i> Continue as Guest</button>
+
         <p class="auth-switch">Don't have an account? <a href="#" id="go-register">Register</a></p>
       </div>
     </div>
@@ -83,7 +88,7 @@
       <img src="./img/gdg.webp" alt="GDG" class="header-logo" />
       <div class="header-info">
         <h2>GDG API Editor</h2>
-        <span class="status-badge" id="status-badge">Live</span>
+        <span class="status-badge" id="status-badge"><span class="status-dot" id="status-dot"></span>Live</span>
         <div id="unsaved-dot" title="Unsaved changes"></div>
       </div>
       <div class="header-welcome">
@@ -100,6 +105,13 @@
         <span id="item-count">0 items</span>
         <input type="text" id="search-input" placeholder="⌕ Search..." />
       </div>
+    </div>
+
+    <!-- GUEST BANNER -->
+    <div id="guest-banner" class="hidden">
+      <i class="fa-solid fa-eye"></i>
+      <span>You're in <strong>preview mode</strong> - changes are local only and cannot be pushed to the API.</span>
+      <a href="#" id="guest-login-link">Login to edit</a>
     </div>
 
     <div class="container" id="item-container">
