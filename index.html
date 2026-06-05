@@ -59,18 +59,21 @@
 
         <label for="reg-username">Username</label>
         <input type="text" id="reg-username" placeholder="Choose a username" autocomplete="username" />
+        <span class="field-error" id="err-username"></span>
 
         <label for="reg-password">Password</label>
         <div class="password-wrap">
           <input type="password" id="reg-password" placeholder="Choose a password" autocomplete="new-password" />
           <button class="toggle-pw" data-target="reg-password"><i class="fa-solid fa-eye"></i></button>
         </div>
+        <span class="field-error" id="err-password"></span>
 
         <label for="reg-repeat">Repeat Password</label>
         <div class="password-wrap">
           <input type="password" id="reg-repeat" placeholder="Repeat password" autocomplete="new-password" />
           <button class="toggle-pw" data-target="reg-repeat"><i class="fa-solid fa-eye"></i></button>
         </div>
+        <span class="field-error" id="err-repeat"></span>
 
         <label for="reg-code">Access Code</label>
         <input type="text" id="reg-code" placeholder="Enter access code" />

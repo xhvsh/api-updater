@@ -159,6 +159,51 @@ function clearCredentials() {
   localStorage.removeItem(STORAGE_KEY);
 }
 
+/* REGISTER FIELD VALIDATION */
+
+const USERNAME_RE = /^[a-zA-Z0-9_\.\-]+$/;
+
+function setFieldError(inputId, errorId, msg) {
+  const input = $(inputId);
+  const err   = $(errorId);
+  if (msg) {
+    input.classList.add("input-invalid");
+    input.classList.remove("input-valid");
+    err.textContent = msg;
+  } else {
+    input.classList.remove("input-invalid");
+    if (input.value.length > 0) input.classList.add("input-valid");
+    err.textContent = "";
+  }
+}
+
+function clearFieldState(inputId, errorId) {
+  const input = $(inputId);
+  const err   = $(errorId);
+  input.classList.remove("input-invalid", "input-valid");
+  err.textContent = "";
+}
+
+function validateUsername(val) {
+  if (!val)                          return "Username is required.";
+  if (val.length < 3)                return "Must be at least 3 characters.";
+  if (val.length > 20)               return "Must be 20 characters or fewer.";
+  if (!USERNAME_RE.test(val))        return "Only letters, numbers, _ - . allowed.";
+  return "";
+}
+
+function validatePassword(val) {
+  if (!val)            return "Password is required.";
+  if (val.length < 8)  return "Must be at least 8 characters.";
+  return "";
+}
+
+function validateRepeat(pw, repeat) {
+  if (!repeat)           return "Please repeat your password.";
+  if (pw !== repeat)     return "Passwords do not match.";
+  return "";
+}
+
 /* AUTH SCREENS */
 
 function showScreen(id) {
@@ -170,13 +215,21 @@ function showScreen(id) {
 /* REGISTER */
 
 async function register() {
-  const username = $("reg-username").value.trim();
-  const password = $("reg-password").value;
-  const repeat = $("reg-repeat").value;
+  const username   = $("reg-username").value.trim();
+  const password   = $("reg-password").value;
+  const repeat     = $("reg-repeat").value;
   const accessCode = $("reg-code").value.trim();
 
-  if (!username || !password || !repeat || !accessCode) return showAlert("Please fill in all fields.", "error");
-  if (password !== repeat) return showAlert("Passwords do not match.", "error");
+  // Run all validations and show errors
+  const uErr = validateUsername(username);
+  const pErr = validatePassword(password);
+  const rErr = validateRepeat(password, repeat);
+  setFieldError("reg-username", "err-username", uErr);
+  setFieldError("reg-password", "err-password", pErr);
+  setFieldError("reg-repeat",   "err-repeat",   rErr);
+  if (uErr || pErr || rErr) return;
+
+  if (!accessCode) return showAlert("Please enter your access code.", "error");
 
   setLoading(true, "Registering...");
   try {
@@ -562,6 +615,12 @@ document.addEventListener("DOMContentLoaded", () => {
   $("go-register").addEventListener("click", (e) => {
     e.preventDefault();
     showScreen("register-screen");
+    // Reset register form state
+    ["reg-username", "reg-password", "reg-repeat"].forEach((id, i) => {
+      clearFieldState(id, ["err-username", "err-password", "err-repeat"][i]);
+      $(id).value = "";
+    });
+    $("reg-code").value = "";
   });
   $("go-login").addEventListener("click", (e) => {
     e.preventDefault();
@@ -573,6 +632,27 @@ document.addEventListener("DOMContentLoaded", () => {
       const input = $(btn.dataset.target);
       input.type = input.type === "password" ? "text" : "password";
     });
+  });
+
+  // Live validation on register fields
+  $("reg-username").addEventListener("input", () => {
+    const v = $("reg-username").value.trim();
+    setFieldError("reg-username", "err-username", validateUsername(v));
+    if (!v) clearFieldState("reg-username", "err-username");
+  });
+  $("reg-password").addEventListener("input", () => {
+    const v = $("reg-password").value;
+    setFieldError("reg-password", "err-password", validatePassword(v));
+    if (!v) clearFieldState("reg-password", "err-password");
+    // Re-check repeat if already touched
+    const r = $("reg-repeat").value;
+    if (r) setFieldError("reg-repeat", "err-repeat", validateRepeat(v, r));
+  });
+  $("reg-repeat").addEventListener("input", () => {
+    const r = $("reg-repeat").value;
+    const p = $("reg-password").value;
+    setFieldError("reg-repeat", "err-repeat", validateRepeat(p, r));
+    if (!r) clearFieldState("reg-repeat", "err-repeat");
   });
 
   $("register-btn").addEventListener("click", register);

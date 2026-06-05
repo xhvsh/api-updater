@@ -1060,6 +1060,32 @@ header {
   50%       { box-shadow: 0 0 0 5px rgba(87, 194, 109, 0); }
 }
 
+
+/* Field validation errors (register form) */
+.field-error {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--danger);
+  margin-top: -0.35rem;
+  min-height: 0;
+  line-height: 1.4;
+  transition: opacity 0.15s;
+}
+.field-error:empty {
+  display: none;
+}
+
+/* Invalid input highlight */
+.auth-card input.input-invalid,
+.auth-card input.input-invalid:focus {
+  border-color: var(--danger);
+  background: rgba(224, 92, 92, 0.06);
+}
+.auth-card input.input-valid,
+.auth-card input.input-valid:focus {
+  border-color: #57c26d;
+}
+
 /* responsive */
 
 @media (max-width: 540px) {
