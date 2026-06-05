@@ -322,6 +322,7 @@ async function logout() {
 /* GIST API */
 
 async function loadGuestData() {
+  const _t0 = Date.now();
   setLoading(true, "Loading preview...");
   try {
     const res = await fetch(GIST_RAW_URL + "?t=" + Date.now());
@@ -331,7 +332,7 @@ async function loadGuestData() {
     originalData = deepCopy(apiData);
     markUnsaved(false);
     renderItems();
-    toast("Preview loaded - read only", "info");
+    toast(`Preview loaded in ${Date.now() - _t0}ms - read only`, "info");
   } catch (err) {
     toast("Could not load preview data: " + err.message, "error");
   } finally {
@@ -340,6 +341,7 @@ async function loadGuestData() {
 }
 
 async function loadGist() {
+  const _t0 = Date.now();
   setLoading(true, "Fetching data...");
   try {
     const res = await fetch(GIST_URL, {
@@ -360,7 +362,7 @@ async function loadGist() {
     originalData = deepCopy(apiData);
     markUnsaved(false);
     renderItems();
-    toast("Loaded successfully", "success");
+    toast(`Loaded successfully in ${Date.now() - _t0}ms`, "success");
   } catch (err) {
     toast(err.message, "error");
   } finally {
@@ -375,6 +377,7 @@ async function pushGist() {
     return;
   }
 
+  const _t0 = Date.now();
   setLoading(true, "Pushing changes...");
   try {
     const res = await fetch(GIST_URL, {
@@ -393,7 +396,7 @@ async function pushGist() {
 
     originalData = deepCopy(apiData);
     markUnsaved(false);
-    toast("API updated successfully!", "success");
+    toast(`API updated successfully in ${Date.now() - _t0}ms`, "success");
   } catch (err) {
     toast(err.message, "error");
   } finally {
