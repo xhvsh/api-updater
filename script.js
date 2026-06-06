@@ -28,6 +28,7 @@ let originalData = [];
 let dragSrcIdx = null;
 let hasUnsaved = false;
 let searchTerm = "";
+let filterNoExpl = false;  // NEW: no-explanation filter state
 let isGuest = false;
 
 // remove old key system
@@ -337,6 +338,16 @@ function enterApp(username, token, guestMode = false) {
     updateBtn.querySelector("span").innerHTML = '<i class="fa-solid fa-paper-plane"></i> Push to API';
   }
 
+  // Logout/Login button: in guest mode show "Login" with green highlight
+  const logoutBtn = $("logout-btn");
+  if (guestMode) {
+    logoutBtn.textContent = "Login";
+    logoutBtn.classList.add("guest-login-btn");
+  } else {
+    logoutBtn.textContent = "Logout";
+    logoutBtn.classList.remove("guest-login-btn");
+  }
+
   if (guestMode) {
     loadGuestData();
   } else {
@@ -353,6 +364,9 @@ async function logout() {
   apiData = [];
   originalData = [];
   isGuest = false;
+  filterNoExpl = false;
+  const filterBtn = $("filter-no-expl");
+  if (filterBtn) filterBtn.classList.remove("active");
   markUnsaved(false);
   $("app").classList.add("hidden");
   $("auth-wrapper").classList.remove("hidden");
@@ -370,6 +384,10 @@ async function logout() {
   updateBtn.classList.remove("guest-disabled");
   updateBtn.title = "";
   updateBtn.querySelector("span").innerHTML = '<i class="fa-solid fa-paper-plane"></i> Push to API';
+  // Reset logout button
+  const logoutBtn = $("logout-btn");
+  logoutBtn.textContent = "Logout";
+  logoutBtn.classList.remove("guest-login-btn");
 }
 
 /* GIST API */
@@ -468,7 +486,19 @@ function renderItems() {
   updateCount();
   container.querySelectorAll(".item-card").forEach((c) => c.remove());
 
-  const filtered = apiData.map((item, i) => ({ item, i })).filter(({ item }) => !searchTerm || item.phrase?.toLowerCase().includes(searchTerm) || item.explanation?.toLowerCase().includes(searchTerm));
+  const filtered = apiData
+    .map((item, i) => ({ item, i }))
+    .filter(({ item }) => {
+      // text search
+      if (searchTerm && !item.phrase?.toLowerCase().includes(searchTerm) && !item.explanation?.toLowerCase().includes(searchTerm)) {
+        return false;
+      }
+      // no-explanation filter
+      if (filterNoExpl && item.explanation && item.explanation.trim() !== "") {
+        return false;
+      }
+      return true;
+    });
 
   const empty =
     container.querySelector(".empty-state") ||
@@ -674,6 +704,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
   $("search-input").addEventListener("input", (e) => {
     searchTerm = e.target.value.toLowerCase().trim();
+    renderItems();
+  });
+
+  // No-explanation filter toggle
+  $("filter-no-expl").addEventListener("click", () => {
+    filterNoExpl = !filterNoExpl;
+    $("filter-no-expl").classList.toggle("active", filterNoExpl);
     renderItems();
   });
 
