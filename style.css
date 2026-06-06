@@ -334,10 +334,14 @@ header {
   flex-shrink: 0;
 }
 
-.header-info {
+.header-info,.header-wrapper {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+}
+
+.header-wrapper {
+  flex-direction: row;
 }
 
 .header-info h2 {
@@ -392,6 +396,7 @@ header {
   color: var(--accent2);
   font-size: 0.8rem;
   font-weight: 500;
+  white-space: nowrap;
 }
 
 /* Guest username tint */
@@ -1126,7 +1131,7 @@ header {
 
 /* responsive */
 
-@media (max-width: 540px) {
+@media (max-width: 650px) {
   header {
     padding: 0.75rem 1rem;
   }
@@ -1158,5 +1163,11 @@ header {
   .filter-btn {
     font-size: 0.72rem;
     padding: 0.35rem 0.55rem;
+  }
+}
+@media (max-width: 388px) {
+  .header-info {
+    flex-wrap: wrap;
+    gap: 0.2rem;
   }
 }
