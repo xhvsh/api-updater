@@ -513,10 +513,6 @@ header {
     color 0.2s,
     background 0.2s;
 }
-.filter-btn:hover {
-  border-color: var(--accent);
-  color: var(--accent2);
-}
 .filter-btn.active {
   background: rgba(124, 106, 247, 0.15);
   border-color: var(--accent);
