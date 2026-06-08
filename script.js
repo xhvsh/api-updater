@@ -275,10 +275,9 @@ async function login() {
     if (remember) saveCredentials(username, password);
     else clearCredentials();
 
-    enterApp(username, token, false);
+    enterApp(username, token, false, true);
   } catch (err) {
     showAlert("Network error: " + err.message, "error");
-  } finally {
     setLoading(false);
   }
 }
@@ -292,7 +291,7 @@ function enterGuest() {
 
 /* APP ENTRY / LOGOUT */
 
-function enterApp(username, token, guestMode = false) {
+function enterApp(username, token, guestMode = false, keepLoading = false) {
   ghToken = token;
   isGuest = guestMode;
 
@@ -319,9 +318,9 @@ function enterApp(username, token, guestMode = false) {
 
   // Guest banner
   if (guestMode) {
-    $("guest-banner").classList.remove("hidden");
+    loadGuestData();
   } else {
-    $("guest-banner").classList.add("hidden");
+    loadGist(keepLoading);
   }
 
   // Push to API button
@@ -346,12 +345,6 @@ function enterApp(username, token, guestMode = false) {
   } else {
     logoutBtn.textContent = "Logout";
     logoutBtn.classList.remove("guest-login-btn");
-  }
-
-  if (guestMode) {
-    loadGuestData();
-  } else {
-    loadGist();
   }
 }
 
@@ -411,9 +404,9 @@ async function loadGuestData() {
   }
 }
 
-async function loadGist() {
+async function loadGist(continueLoading = false) {
   const _t0 = Date.now();
-  setLoading(true, "Fetching data...");
+  setLoading(true, continueLoading ? "Loading content..." : "Fetching data...");
   try {
     const res = await fetch(GIST_URL, {
       headers: {
