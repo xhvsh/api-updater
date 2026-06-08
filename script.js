@@ -142,6 +142,41 @@ function autoResize(ta) {
   ta.style.height = ta.scrollHeight + "px";
 }
 
+// ─── DEVICE FINGERPRINT ───
+// Generates a stable 32-char hex hash from browser/hardware characteristics.
+// Survives incognito mode and is unaffected by VPNs or IP changes.
+// Sent with every login attempt so the server can rate-limit per device+username.
+
+async function getDeviceFingerprint() {
+  let raw = [
+    navigator.userAgent,
+    navigator.language,
+    `${screen.width}x${screen.height}x${screen.colorDepth}`,
+    Intl.DateTimeFormat().resolvedOptions().timeZone,
+    navigator.platform,
+    String(navigator.hardwareConcurrency ?? ""),
+  ].join("|");
+
+  // Canvas fingerprint — rendering differences are unique per GPU/driver/OS
+  try {
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    ctx.textBaseline = "top";
+    ctx.font = "14px Arial";
+    ctx.fillStyle = "#f60";
+    ctx.fillRect(0, 0, 30, 10);
+    ctx.fillStyle = "#069";
+    ctx.fillText("gdg🔒", 2, 2);
+    raw += "|" + canvas.toDataURL();
+  } catch (_) {}
+
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(raw));
+  return Array.from(new Uint8Array(buf))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("")
+    .slice(0, 32);
+}
+
 // ─── CRYPTO HELPERS ───
 // Uses Web Crypto API (AES-GCM) - no external dependencies, built into all modern browsers.
 // A stable key derived from a salt + origin ties the ciphertext to this browser/origin
@@ -189,7 +224,7 @@ async function decryptText(b64) {
   return new TextDecoder().decode(plainBuf);
 }
 
-// remember me
+// ─── REMEMBER-ME ───
 
 async function saveCredentials(username, password) {
   try {
@@ -206,7 +241,7 @@ async function loadCredentials() {
     const r = localStorage.getItem(STORAGE_KEY);
     if (!r) return null;
     const stored = JSON.parse(r);
-    // Decrypt only if flagged as encrypted — graceful fallback for any old plaintext entries
+    // Decrypt only if flagged as encrypted - graceful fallback for any old plaintext entries
     if (stored.enc) {
       stored.password = await decryptText(stored.password);
     }
@@ -248,11 +283,11 @@ function clearFieldState(inputId, errorId) {
 
 function validateUsername(val) {
   const errors = [];
-  if (!val)                          errors.push(`Username is required.`);
+  if (!val)                      errors.push(`Username is required.`);
   else {
-    if (val.length < 3)              errors.push(`Must be at least 3 characters.`);
-    if (val.length > 20)             errors.push(`Must be 20 characters or fewer.`);
-    if (!USERNAME_RE.test(val))      errors.push(`Only letters, numbers, _ - . allowed.`);
+    if (val.length < 3)          errors.push(`Must be at least 3 characters.`);
+    if (val.length > 20)         errors.push(`Must be 20 characters or fewer.`);
+    if (!USERNAME_RE.test(val))  errors.push(`Only letters, numbers, _ - . allowed.`);
   }
   return errors;
 }
@@ -332,10 +367,12 @@ async function login() {
 
   setLoading(true, "Logging in...");
   try {
+    const fingerprint = await getDeviceFingerprint();
+
     const res = await fetch(`${SUPABASE_URL}/login`, {
       method: "POST",
       headers: PUBLIC_HEADERS,
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify({ username, password, fingerprint }),
     });
     const data = await res.json();
     if (!res.ok) return showAlert(data.error || "Login failed.", "error");
@@ -347,6 +384,7 @@ async function login() {
     enterApp(username, token, false, true);
   } catch (err) {
     showAlert("Network error: " + err.message, "error");
+  } finally {
     setLoading(false);
   }
 }
