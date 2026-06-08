@@ -17,6 +17,7 @@ const PUBLIC_HEADERS = {
 let successIcon = `<i class="fa-solid fa-circle-check"></i>`;
 let errorIcon = `<i class="fa-solid fa-circle-xmark"></i>`;
 let infoIcon = `<i class="fa-solid fa-circle-info"></i>`;
+let warningIcon = `<i class="fa-solid fa-square-xmark"></i>`
 
 // Public raw gist URL - no auth required, readable by anyone
 const GIST_RAW_URL = "https://gist.githubusercontent.com/xhvsh/ec578df51c8684fd9729ee86958c4dbc/raw/api.json";
@@ -28,7 +29,7 @@ let originalData = [];
 let dragSrcIdx = null;
 let hasUnsaved = false;
 let searchTerm = "";
-let filterNoExpl = false;  // NEW: no-explanation filter state
+let filterNoExpl = false;
 let isGuest = false;
 
 // remove old key system
@@ -93,7 +94,7 @@ function _spawnToast(title, msg, type, duration, dismissable, onClose) {
   el.querySelector(".toast-close").addEventListener("click", () => clearTimeout(timer), { once: true });
 }
 
-/* ── Confirm modal ── */
+/* Confirm modal */
 function showConfirm(title, msg) {
   return new Promise((resolve) => {
     $("confirm-message").textContent = `${title} - ${msg}`;
@@ -164,13 +165,14 @@ function clearCredentials() {
 
 const USERNAME_RE = /^[a-zA-Z0-9_\.\-]+$/;
 
-function setFieldError(inputId, errorId, msg) {
+function setFieldError(inputId, errorId, msgs) {
   const input = $(inputId);
   const err   = $(errorId);
-  if (msg) {
+  const list = Array.isArray(msgs) ? msgs.filter(Boolean) : (msgs ? [msgs] : []);
+  if (list.length > 0) {
     input.classList.add("input-invalid");
     input.classList.remove("input-valid");
-    err.textContent = msg;
+    err.innerHTML = list.map(m => `<span>${warningIcon} ${m}</span>`).join("<br>");
   } else {
     input.classList.remove("input-invalid");
     if (input.value.length > 0) input.classList.add("input-valid");
@@ -186,23 +188,30 @@ function clearFieldState(inputId, errorId) {
 }
 
 function validateUsername(val) {
-  if (!val)                          return "Username is required.";
-  if (val.length < 3)                return "Must be at least 3 characters.";
-  if (val.length > 20)               return "Must be 20 characters or fewer.";
-  if (!USERNAME_RE.test(val))        return "Only letters, numbers, _ - . allowed.";
-  return "";
+  const errors = [];
+  if (!val)                          errors.push(`Username is required.`);
+  else {
+    if (val.length < 3)              errors.push(`Must be at least 3 characters.`);
+    if (val.length > 20)             errors.push(`Must be 20 characters or fewer.`);
+    if (!USERNAME_RE.test(val))      errors.push(`Only letters, numbers, _ - . allowed.`);
+  }
+  return errors;
 }
 
 function validatePassword(val) {
-  if (!val)            return "Password is required.";
-  if (val.length < 8)  return "Must be at least 8 characters.";
-  return "";
+  const errors = [];
+  if (!val)              errors.push(`Password is required.`);
+  else {
+    if (val.length < 8)  errors.push(`Must be at least 8 characters.`);
+  }
+  return errors;
 }
 
 function validateRepeat(pw, repeat) {
-  if (!repeat)           return "Please repeat your password.";
-  if (pw !== repeat)     return "Passwords do not match.";
-  return "";
+  const errors = [];
+  if (!repeat)             errors.push(`Please repeat your password.`);
+  else if (pw !== repeat)  errors.push(`Passwords do not match.`);
+  return errors;
 }
 
 /* AUTH SCREENS */
