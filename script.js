@@ -17,7 +17,7 @@ const PUBLIC_HEADERS = {
 let successIcon = `<i class="fa-solid fa-circle-check"></i>`;
 let errorIcon = `<i class="fa-solid fa-circle-xmark"></i>`;
 let infoIcon = `<i class="fa-solid fa-circle-info"></i>`;
-let warningIcon = `<i class="fa-solid fa-square-xmark"></i>`
+let warningIcon = `<i class="fa-solid fa-square-xmark"></i>`;
 
 // Public raw gist URL - no auth required, readable by anyone
 const GIST_RAW_URL = "https://gist.githubusercontent.com/xhvsh/ec578df51c8684fd9729ee86958c4dbc/raw/api.json";
@@ -142,21 +142,80 @@ function autoResize(ta) {
   ta.style.height = ta.scrollHeight + "px";
 }
 
-/* REMEMBER-ME (stores username + password) */
+// ─── CRYPTO HELPERS ───
+// Uses Web Crypto API (AES-GCM) - no external dependencies, built into all modern browsers.
+// A stable key derived from a salt + origin ties the ciphertext to this browser/origin
+// so the stored password is NOT human-readable in localStorage.
 
-function saveCredentials(username, password) {
+const CRYPTO_SALT = "gdg_remember_v1"; // change this string to invalidate all stored credentials
+
+async function deriveKey() {
+  const raw = new TextEncoder().encode(CRYPTO_SALT + location.origin);
+  const keyMaterial = await crypto.subtle.importKey(
+    "raw", raw, { name: "PBKDF2" }, false, ["deriveKey"]
+  );
+  return crypto.subtle.deriveKey(
+    {
+      name: "PBKDF2",
+      salt: new TextEncoder().encode(CRYPTO_SALT),
+      iterations: 100_000,
+      hash: "SHA-256",
+    },
+    keyMaterial,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["encrypt", "decrypt"]
+  );
+}
+
+async function encryptText(plaintext) {
+  const key = await deriveKey();
+  const iv = crypto.getRandomValues(new Uint8Array(12)); // fresh random IV every save
+  const encoded = new TextEncoder().encode(plaintext);
+  const cipherBuf = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, encoded);
+  // Prepend IV to ciphertext, then base64-encode the whole thing
+  const combined = new Uint8Array(iv.byteLength + cipherBuf.byteLength);
+  combined.set(iv, 0);
+  combined.set(new Uint8Array(cipherBuf), iv.byteLength);
+  return btoa(String.fromCharCode(...combined));
+}
+
+async function decryptText(b64) {
+  const key = await deriveKey();
+  const combined = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+  const iv = combined.slice(0, 12);
+  const cipherBuf = combined.slice(12);
+  const plainBuf = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, cipherBuf);
+  return new TextDecoder().decode(plainBuf);
+}
+
+// remember me
+
+async function saveCredentials(username, password) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ username, password }));
+    const encryptedPassword = await encryptText(password);
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ username, password: encryptedPassword, enc: true })
+    );
   } catch (_) {}
 }
-function loadCredentials() {
+
+async function loadCredentials() {
   try {
     const r = localStorage.getItem(STORAGE_KEY);
-    return r ? JSON.parse(r) : null;
+    if (!r) return null;
+    const stored = JSON.parse(r);
+    // Decrypt only if flagged as encrypted — graceful fallback for any old plaintext entries
+    if (stored.enc) {
+      stored.password = await decryptText(stored.password);
+    }
+    return stored;
   } catch (_) {
     return null;
   }
 }
+
 function clearCredentials() {
   localStorage.removeItem(STORAGE_KEY);
 }
@@ -252,6 +311,7 @@ async function register() {
     if (!res.ok) return showAlert(data.error || "Registration failed.", "error");
 
     $("login-username").value = username;
+    $("login-password").value = "";
     showScreen("login-screen");
     showAlert("Registration successful! Please log in.", "success");
   } catch (err) {
@@ -281,7 +341,7 @@ async function login() {
     if (!res.ok) return showAlert(data.error || "Login failed.", "error");
 
     const token = data.apiKey || "";
-    if (remember) saveCredentials(username, password);
+    if (remember) await saveCredentials(username, password);
     else clearCredentials();
 
     enterApp(username, token, false, true);
@@ -765,13 +825,15 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // Pre-fill from remember-me (no auto-login)
-  const saved = loadCredentials();
-  if (saved?.username) {
-    $("login-username").value = saved.username;
-    $("remember-me").checked = true;
-  }
-  if (saved?.password) {
-    $("login-password").value = saved.password;
-  }
+  // Pre-fill from remember-me (async decrypt)
+  (async () => {
+    const saved = await loadCredentials();
+    if (saved?.username) {
+      $("login-username").value = saved.username;
+      $("remember-me").checked = true;
+    }
+    if (saved?.password) {
+      $("login-password").value = saved.password;
+    }
+  })();
 });
