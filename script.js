@@ -237,7 +237,7 @@ async function register() {
   setFieldError("reg-username", "err-username", uErr);
   setFieldError("reg-password", "err-password", pErr);
   setFieldError("reg-repeat",   "err-repeat",   rErr);
-  if (uErr || pErr || rErr) return;
+  if (uErr.length || pErr.length || rErr.length) return;
 
   if (!accessCode) return showAlert("Please enter your access code.", "error");
 
